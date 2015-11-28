@@ -9,10 +9,6 @@ int main(int argc, char **argv)
 {
 	float fahr, celsius;
 
-	LOWER = 0.0f;
-	UPPER = 300.0f;
-	STEP  = 10;
-
 	if (argc > 1) {
 		printf("Usage:\n");
 		printf("./a.out	-i	print out in invert order.\n");
