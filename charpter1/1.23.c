@@ -1,11 +1,22 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#define MAX_LINE 100
-#define LINE_80  80
-#define MAX_COL 20	/* max column of input */
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
 
-#define TAB_BIT	 4	/* a tab means how many blank space */
+#define MAX_LINE 	1000 + 1
+#define LINE_80  	80
+#define MAX_COL 	20	/* max column of input */
+
+#define COMMENT_IN	1	/* a flag about if character posion is in a comment */
+#define COMMENT_OUT	0	/* out of comment */
+
+#define TAB_BIT	 	4	/* a tab means how many blank space */
+
+#define ERR_MALLOC	-3
+#define ERR_OPEN	-4
 
 int get_line(char *line, int limit);
 int copy_line(char *to, char *from);
@@ -13,6 +24,8 @@ void reverse_line(char *line);
 int detab(char *line, char *new_line);
 int blank2tab(char *line, char *new_line);
 void cut_line(char *line, char *new_line);
+int delete_comment(char *line);
+int get_line_from_file(char *buf, char *path, long num);
 
 int main(int argc ,char **argv)
 {
@@ -31,11 +44,11 @@ int main(int argc ,char **argv)
 	memset(line_blank2tab, '\0', sizeof(line_blank2tab));
 	memset(line_cut, 0xcc, sizeof(line_cut));
 
-	while ((line_len = get_line(line, MAX_LINE)) > 0) {
-		if (line_len > line_len_max) {
-			copy_line(line_longest, line);
-			line_len_max = line_len;
-		}
+//	while ((line_len = get_line(line, MAX_LINE)) > 0) {
+//		if (line_len > line_len_max) {
+//			copy_line(line_longest, line);
+//			line_len_max = line_len;
+//		}
 /*		if (remove_line(line) > 0) {
 			printf("line: %s\n", line);
 		} else {
@@ -50,15 +63,25 @@ int main(int argc ,char **argv)
 
 //		blank2tab(line, line_blank2tab);
 		
-		cut_line(line, line_cut);
+/*		cut_line(line, line_cut);
 		printf("line cut:\n%s\n", line_cut);
 		printf("line:\n%s\n", line);
+*/
 		/* print out the line longer than 80 */
 /*		if (line_len > LINE_80) {
 			printf("%d\t%s\n", line_len, line);
 		}
 */
+//		
+//	}
+	if (get_line_from_file(line, "1.23.c", 1000) < 0) {
+		printf("get line fail.\n");
+		return -1;
 	}
+	printf("line: %s\n", line);
+
+	delete_comment(line);
+	printf("line: %s\n", line);
 	
 	if (line_len_max > 0) {
 		printf("longest line: %d\n%s\n", line_len_max, line_longest);
@@ -239,4 +262,66 @@ void cut_line(char *line, char *new_line)
 		} 
 		iterator++;
 	}	
+}
+
+/* delete comment in a string 
+ * return 0 if delete success
+ * else return a negtive value 
+ */
+int delete_comment(char *line)
+{
+	int iterator = 0;
+	int j = 0;	/* index of new line */
+	char *new_line = NULL;
+	char *p_comment_start = NULL;
+	char *p_comment_end   = NULL;
+
+	int status = COMMENT_OUT;
+
+	if ((new_line = malloc(strlen(line) + 1)) == NULL) {
+		printf(__FUNCTION__, "malloc failure.\n");
+		return ERR_MALLOC;
+	}
+	
+	while (line[iterator] != '\0') {
+		if (line[iterator] == '/' && line[iterator + 1] == '*' || line[iterator] == '/' && line[iterator + 1] == '/') { /* find the start of comment */
+			status = COMMENT_IN;
+			*(new_line + j) = ' ';
+			j++;
+		} else if (line[iterator] == '/' && line[iterator - 1] == '*') {
+			status = COMMENT_OUT;	
+		} else if (status == COMMENT_IN && line[iterator] == '\n') {
+			status = COMMENT_OUT;	
+		} else if (status == COMMENT_OUT){
+			*(new_line + j) = line[iterator];
+			j++;
+			status = COMMENT_OUT;
+		} 
+		iterator++;
+	}
+
+	memcpy(line, new_line, j);
+	line[j] = '\0';
+
+	free(new_line);
+
+	return 0;
+}
+
+/* read num bytes from file */
+int get_line_from_file(char *buf, char *path, long num)
+{
+	int fd;
+
+	if ((fd = open(path, O_RDONLY)) < 0) { /* if open fail, -1 returned  */
+		printf("open fail.\n");	
+		return ERR_OPEN;
+	}
+	
+	while (read(fd, buf, num) > 0) {
+		;
+	}
+
+	close(fd);
+	return 0;
 }
