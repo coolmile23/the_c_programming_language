@@ -9,7 +9,12 @@ int main(int argc, char **argv)
 	char *string = "0xffff";	
 	int  num     = 0;
 
-	num = hex2int(string);
+	if (argc != 2) {
+		printf("usage: ./a.out hexdecimal\n");
+		return 0;
+	}
+
+	num = hex2int(argv[1]);
 
 	printf("num = %d\n", num);
 
